@@ -21,7 +21,7 @@ The `SecureStorage` smart contract is designed to securely manage a single value
 ### Deployment
 
 1. Open Remix IDE.
-2. Create a new file named `securestorage.sol` and paste the contract code.
+2. Create a new file named `securestorage.sol` and paste the maincontract code.
 3. Compile the contract using the Solidity compiler.
 4. Deploy the contract to the desired network.
 
