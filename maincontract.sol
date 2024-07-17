@@ -1,56 +1,83 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-contract SecureStorage {
-    address private admin;
+contract SimpleVoting {
+    address public administrator;
+    mapping(string => uint256) public votes;
+    string[] public nominees;
 
-    uint256 private storedValue;
-
-    event ValueSet(uint256 newValue);
-    event ValueDecremented(uint256 newValue);
-    event ValueReset();
-
-    // Constructor sets the deployer as the admin of the contract
     constructor() {
-        admin = msg.sender;
+        administrator = msg.sender;
+        nominees = ["Jason", "Andrew", "Vince"]; // Initialize the nominees
     }
 
-    // Modifier to restrict functions to only the admin
     modifier onlyAdmin() {
-        require(msg.sender == admin, "Caller is not the admin");
+        require(msg.sender == administrator, "Not the contract owner");
         _;
     }
 
-    // Function to set the stored value, only callable by the admin
-    function setStoredValue(uint256 _value) public onlyAdmin {
-        require(_value > 0, "Value must be greater than zero");
-        storedValue = _value;
-        emit ValueSet(_value);
+    // Add a new nominee
+    function addNominee(string memory nominee) public onlyAdmin {
+        require(!isValidNominee(nominee), "Nominee already exists");
+        nominees.push(nominee);
     }
 
-    // Function to decrement the stored value by one, only callable by the admin
-    function decrementStoredValue() public onlyAdmin {
-        assert(storedValue > 0);
-        storedValue -= 1;
-        emit ValueDecremented(storedValue);
-    }
+    // Remove an existing nominee
+    function removeNominee(string memory nominee) public onlyAdmin {
+        require(isValidNominee(nominee), "Invalid nominee");
 
-    // Function to reset the stored value to zero, only callable by the admin
-    function resetStoredValue() public onlyAdmin {
-        if (storedValue == 0) {
-            revert("Stored value is already zero");
+        // Find and remove the nominee
+        for (uint256 i = 0; i < nominees.length; i++) {
+            if (keccak256(abi.encodePacked(nominees[i])) == keccak256(abi.encodePacked(nominee))) {
+                nominees[i] = nominees[nominees.length - 1];
+                nominees.pop();
+                delete votes[nominee];
+                break;
+            }
         }
-        storedValue = 0;
-        emit ValueReset();
     }
 
-    // Function to get the current stored value
-    function getStoredValue() public view returns (uint256) {
-        return storedValue;
+    // Cast a vote for a nominee
+    function castVote(string memory nominee) public {
+        require(isValidNominee(nominee), "Invalid nominee");
+        votes[nominee] += 1;
     }
 
-    // Function to get the admin address
-    function getAdmin() public view returns (address) {
-        return admin;
+    // Check if a nominee is valid
+    function isValidNominee(string memory nominee) internal view returns (bool) {
+        for (uint256 i = 0; i < nominees.length; i++) {
+            if (keccak256(abi.encodePacked(nominees[i])) == keccak256(abi.encodePacked(nominee))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Reset all votes to zero
+    function resetVotes() public onlyAdmin {
+        for (uint256 i = 0; i < nominees.length; i++) {
+            votes[nominees[i]] = 0;
+        }
+    }
+
+    // Get the list of all nominees
+    function getAllNominees() public view returns (string[] memory) {
+        return nominees;
+    }
+
+    // Get the number of votes for a specific nominee
+    function getVotes(string memory nominee) public view returns (uint256) {
+        require(isValidNominee(nominee), "Invalid nominee");
+        return votes[nominee];
+    }
+
+    // Verify the invariant that there should be at least one nominee
+    function verifyInvariant() public view {
+        assert(nominees.length > 0);
+    }
+
+    // Emergency stop voting function
+    function haltVoting() public view onlyAdmin {
+        revert("You are not allowed to stop voting");
     }
 }
